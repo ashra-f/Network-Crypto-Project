@@ -37,9 +37,9 @@ fd_set fw;
 fd_set fe;
 int nMaxFd = 0;
 
-std::string command = "";
-std::string u = "";
-void* user = &u;
+//std::string command = "";
+//std::string u = "";
+//void* user = &u;
 pthread_t thread_handles;
 long thread;
 
@@ -75,9 +75,11 @@ void HandleNewConnection()
 
         void* temp = &nNewClient;
 
+        std::cout << nNewClient << std::endl;
+
         pthread_create(&thread_handles, NULL, serverCommands, temp);
 
-        /*int nIndex;
+        int nIndex;
         for (nIndex = 0; nIndex < 5; nIndex++)
         {
             if (nClient[nIndex] == 0)
@@ -97,7 +99,7 @@ void HandleNewConnection()
         }
 
         std::cout << "Client connected on socket: " << nClient << std::endl << std::endl;
-        send(nClient[nIndex], "You have successfully connected to the server!", 47, 0);*/
+        send(nClient[nIndex], "You have successfully connected to the server!", 47, 0);
     }
 
 }
@@ -388,11 +390,11 @@ int main(int argc, char* argv[]) {
                 //Handle New connection
                 HandleNewConnection();
             }
-            else
+            /*else
             {
                 //Check what existing client got the new data
                 HandleDataFromClient();
-            }
+            }*/
         }
     }
 
@@ -486,12 +488,19 @@ std::string extractInfo(char line[], std::string command, void* user) {
 void* serverCommands(void* user) {
     std::cout << "pthread created" /* << static_cast<std::string*>(user)*/ << std::endl;
     int clientID = reinterpret_cast<int>(*(int*)user);
+    std::cout << clientID << std::endl;
+    int buf_len;
+    std::string u;
+    std::string command;
     //int k = &clientID;
 
     while (1) {
 
+        //nRet = select(nMaxFd, &fr, NULL, NULL, &tv);
+
         char sBuff[255] = { 0, };
         int nRet = recv(clientID, sBuff, 255, 0);
+        std::cout << sBuff << " In the while loop" << std::endl;
         if (nRet < 0)
         {
             //This happens when client closes connection abruptly
@@ -501,27 +510,30 @@ void* serverCommands(void* user) {
         }
         else
         {
-            std::cout << std::endl << "Received data from:" << clientID << "[Message:" << sBuff << "]";
-            send(clientID, "Recieved Message", 17, 0);
+            while ((buf_len = (recv(clientID, sBuff, sizeof(sBuff), 0)))) {
+                //Print out recieved message
+                std::cout << "SERVER> Recieved message: " << sBuff;
+                //Parse message for initial command
+                command = buildCommand(sBuff);
+                std::cout << command << std::endl;
+                if (command == "LOGIN") {
+                    u = extractInfo(sBuff, command, &user);
+                    std::cout << u << " logged in!" << std::endl;
+                    send(clientID, "You have logged in!", 20, 0);
+                    //pthread_create(&thread_handles, NULL, serverCommands, user);
+                }
+                // Default response to invalid command
+                else {
+                    std::cout << "SERVER> Command not recognized" << std::endl;
+                    send(clientID, "400 invalid command", 20, 0);
+                }
+            }
+            //std::cout << std::endl << "Received data from:" << clientID << "[Message:" << sBuff << "]";
+            //send(clientID, "Recieved Message", 17, 0);
             break;
         }
 
-        while ((buf_len = (recv(clientID, sBuff, sizeof(sBuff), 0)))) {
-            //Print out recieved message
-            std::cout << "SERVER> Recieved message: " << buf;
-            //Parse message for initial command
-            command = buildCommand(buf);
-            if (command == "LOGIN") {
-                u = extractInfo(buf, command, &user);
-                //std::cout << *(std::string*)user << std::endl;
-                pthread_create(&thread_handles, NULL, serverCommands, user);
-            }
-            // Default response to invalid command
-            else {
-                std::cout << "SERVER> Command not recognized" << std::endl;
-                send(clientID, "400 invalid command", 20, 0);
-            }
-        }
+        
 
     }
 }
