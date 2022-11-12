@@ -492,6 +492,8 @@ void* serverCommands(void* user) {
     int buf_len;
     std::string u;
     std::string command;
+    bool login = false;
+
     //int k = &clientID;
 
     while (1) {
@@ -520,8 +522,61 @@ void* serverCommands(void* user) {
                     u = extractInfo(sBuff, command, &user);
                     std::cout << u << " logged in!" << std::endl;
                     send(clientID, "You have logged in!", 20, 0);
-                    //pthread_create(&thread_handles, NULL, serverCommands, user);
+                    
+                    // this will need to be set to true if the usernmae and password match
+                    login = true;
+
                 }
+
+                else if (command == "BUY" && login) {
+                    std::cout << "Buy command!" << std::endl;
+                    send(clientID, "You sent the BUY command!", 26, 0);
+                }
+                else if (command == "SELL" && login) {
+                    std::cout << "Sell command!" << std::endl;
+                    send(clientID, "You sent the SELL command!", 27, 0);
+                }
+                else if (command == "LIST" && login) {
+                    std::cout << "List command!" << std::endl;
+                    send(clientID, "You sent the LIST command!", 27, 0);
+                }
+                else if (command == "BALANCE" && login) {
+                    std::cout << "Balance command!" << std::endl;
+                    send(clientID, "You sent the BALANCE command!", 30, 0);
+                }
+                else if (command == "QUIT" && login) {
+                    std::cout << "Quit command!" << std::endl;
+                    send(clientID, "You sent the QUIT command!", 27, 0);
+                    close(clientID);
+
+                    login = false;
+                    u = "";
+
+                    break;
+                }
+                else if (command == "SHUTDOWN" && login) {
+                    std::cout << "Shutdown command!" << std::endl;
+                    send(clientID, "You sent the SHUTDOWN command!", 31, 0);
+                }
+                else if (command == "LOGOUT" && login) {
+                    std::cout << "Logout command!" << std::endl;
+                    send(clientID, "You sent the LOGOUT command!", 29, 0);
+                    login = false;
+                    u = "";
+                }
+                else if (command == "DEPOSIT" && login) {
+                    std::cout << "Deposit command!" << std::endl;
+                    send(clientID, "You sent the DEPOSIT command!", 30, 0);
+                }
+                else if (command == "WHO" && login) {
+                    std::cout << "Who command!" << std::endl;
+                    send(clientID, "You sent the WHO command!", 26, 0);
+                }
+                else if (command == "LOOKUP" && login) {
+                    std::cout << "Lookup command!" << std::endl;
+                    send(clientID, "You sent the LOOKUP command!", 29, 0);
+                }
+
                 // Default response to invalid command
                 else {
                     std::cout << "SERVER> Command not recognized" << std::endl;
