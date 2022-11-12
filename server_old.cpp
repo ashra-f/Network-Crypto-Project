@@ -19,7 +19,7 @@
 #include "sqlite3.h"
 
 
-#define SERVER_PORT  29270
+#define SERVER_PORT  5432
 #define MAX_PENDING  5
 #define MAX_LINE     256
 
@@ -61,7 +61,7 @@ void HandleNewConnection()
     //will be 
 
     if (nNewClient < 0) {
-        
+
         perror("Error during accepting connection");
         /*
         sqlite3_close(db);
@@ -73,7 +73,11 @@ void HandleNewConnection()
     }
     else {
 
-        int nIndex;
+        void* temp = &nNewClient;
+
+        pthread_create(&thread_handles, NULL, serverCommands, temp);
+
+        /*int nIndex;
         for (nIndex = 0; nIndex < 5; nIndex++)
         {
             if (nClient[nIndex] == 0)
@@ -93,7 +97,7 @@ void HandleNewConnection()
         }
 
         std::cout << "Client connected on socket: " << nClient << std::endl << std::endl;
-        send(nClient[nIndex], "You have successfully connected to the server!", 47, 0);
+        send(nClient[nIndex], "You have successfully connected to the server!", 47, 0);*/
     }
 
 }
@@ -141,15 +145,13 @@ main()
     std::string command = "";
     std::string user = "";
     pthread_t* thread_handles;
-    long thread; 
-
-    /* build address data structure 
+    long thread;
+    /* build address data structure
     bzero((char*)&sin, sizeof(sin));
     sin.sin_family = AF_INET;
     sin.sin_addr.s_addr = INADDR_ANY;
     sin.sin_port = htons(SERVER_PORT);
-
-    /* setup passive open 
+    /* setup passive open
     if ((s = socket(PF_INET, SOCK_STREAM, 0)) < 0) {
         perror("simplex-talk: socket");
         exit(1);
@@ -159,7 +161,6 @@ main()
         exit(1);
     }
     listen(s, MAX_PENDING);
-
     /* wait for connection, then receive and print text *
     while (1) {
         if ((new_s = accept(s, (struct sockaddr*)&sin, &addr_len)) < 0) {
@@ -269,7 +270,7 @@ int main(int argc, char* argv[]) {
 
 
 
-    
+
 
 
     // Setup passive open // Initialize the socket
@@ -403,7 +404,6 @@ int main(int argc, char* argv[]) {
     /*
     // Wait for connection, then receive and print text
     while (1) {
-
         if ((nClient = accept(nSocket, (struct sockaddr*)&srv, &addr_len)) < 0) {
             perror("Error during accepting connection");
             sqlite3_close(db);
@@ -416,22 +416,16 @@ int main(int argc, char* argv[]) {
             std::cout << "Client connected on socket: " << nClient << std::endl << std::endl;
             send(nClient, "You have successfully connected to the server!", 47, 0);
         }
-
-
-
         while ((buf_len = (recv(nClient, buf, sizeof(buf), 0)))) {
             //Print out recieved message
             std::cout << "SERVER> Recieved message: " << buf;
-
             //Parse message for initial command
             command = buildCommand(buf);
-
             if (command == "LOGIN") {
                 u = extractInfo(buf, command, &user);
                 std::cout << *(std::string*)user << std::endl;
                 pthread_create(&thread_handles, NULL, serverCommands, user);
             }
-
             // Default response to invalid command
             else {
                 std::cout << "SERVER> Command not recognized" << std::endl;
@@ -447,9 +441,9 @@ int main(int argc, char* argv[]) {
     }
 
     //close(nClient);
-    
-    
-    
+
+
+
     sqlite3_close(db);
     std::cout << "Closed DB" << std::endl;
     close(nSocket);
@@ -490,7 +484,46 @@ std::string extractInfo(char line[], std::string command, void* user) {
 }
 
 void* serverCommands(void* user) {
-    std::cout << "pthread created" << static_cast<std::string*>(user) << std::endl;
+    std::cout << "pthread created" /* << static_cast<std::string*>(user)*/ << std::endl;
+    int clientID = reinterpret_cast<int>(*(int*)user);
+    //int k = &clientID;
+
+    while (1) {
+
+        char sBuff[255] = { 0, };
+        int nRet = recv(clientID, sBuff, 255, 0);
+        if (nRet < 0)
+        {
+            //This happens when client closes connection abruptly
+            std::cout << std::endl << "Error at client socket";
+            close(clientID);
+            clientID = 0;
+        }
+        else
+        {
+            std::cout << std::endl << "Received data from:" << clientID << "[Message:" << sBuff << "]";
+            send(clientID, "Recieved Message", 17, 0);
+            break;
+        }
+
+        while ((buf_len = (recv(clientID, sBuff, sizeof(sBuff), 0)))) {
+            //Print out recieved message
+            std::cout << "SERVER> Recieved message: " << buf;
+            //Parse message for initial command
+            command = buildCommand(buf);
+            if (command == "LOGIN") {
+                u = extractInfo(buf, command, &user);
+                //std::cout << *(std::string*)user << std::endl;
+                pthread_create(&thread_handles, NULL, serverCommands, user);
+            }
+            // Default response to invalid command
+            else {
+                std::cout << "SERVER> Command not recognized" << std::endl;
+                send(clientID, "400 invalid command", 20, 0);
+            }
+        }
+
+    }
 }
 
 static int callback(void* ptr, int count, char** data, char** azColName) {
