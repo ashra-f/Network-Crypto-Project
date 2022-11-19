@@ -148,7 +148,9 @@ void HandleDataFromClient()
                     else if (command == "QUIT") {
                         std::cout << "Quit command! in handle data" << std::endl;
                         send(nClient[nIndex], "You sent the QUIT command!", 27, 0);
-                        close(nClient[nIndex]);
+                        int x = nClient[nIndex];
+                        nClient[nIndex] = 0;
+                        close(x);
                     }
                     else {
                         std::cout << std::endl << "Received data from:" << nClient[nIndex] << "[Message:" << sBuff << "] Error 400" << std::endl;
