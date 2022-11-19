@@ -19,7 +19,7 @@
 #include "sqlite3.h"
 
 
-#define SERVER_PORT  5432
+#define SERVER_PORT  54321
 #define MAX_PENDING  5
 #define MAX_LINE     256
 
@@ -141,9 +141,13 @@ void HandleDataFromClient()
 
                         std::string info = extractInfo(sBuff, command);
                         u.user = info;
-                        u.socket = nClient[nIndex];
-
+                        u.socket = nIndex;
                         pthread_create(&thread_handles, NULL, serverCommands, temp);
+                        //int x = nClient[nIndex];
+                        //nClient[nIndex] = -1;
+                        //break;
+                        //close(x);
+
                     }
                     else if (command == "QUIT") {
                         std::cout << "Quit command! in handle data" << std::endl;
@@ -410,16 +414,8 @@ int main(int argc, char* argv[]) {
         std::cout << "Socket Opened: " << nSocket << std::endl;
     }
 
-
-    // Build address data structure
-    srv.sin_family = AF_INET;
-    srv.sin_port = htons(SERVER_PORT);
-    srv.sin_addr.s_addr = INADDR_ANY;
-    memset(&(srv.sin_zero), 0, 8);
-
-
     // Set Socket Options
-    int nOptVal = 0;
+    int nOptVal = 1;
     int nOptLen = sizeof(nOptVal);
     nRet = setsockopt(nSocket, SOL_SOCKET, SO_REUSEADDR, (const char*)&nOptVal, nOptLen);
     if (!nRet) {
@@ -433,6 +429,15 @@ int main(int argc, char* argv[]) {
         std::cout << "Closed socket: " << nSocket << std::endl;
         exit(EXIT_FAILURE);
     }
+
+    // Build address data structure
+    srv.sin_family = AF_INET;
+    srv.sin_port = htons(SERVER_PORT);
+    srv.sin_addr.s_addr = INADDR_ANY;
+    memset(&(srv.sin_zero), 0, 8);
+
+
+    
 
 
     //Bind the socket to the local port
@@ -615,7 +620,8 @@ std::string extractInfo(char line[], std::string command) {
 void* serverCommands(void* user) {
     std::cout << "pthread created" /* << static_cast<std::string*>(user)*/ << std::endl;
     userInfo* uData = (struct userInfo*)user;
-    int clientID = uData->socket;
+    int clientID = nClient[uData->socket];
+    nClient[uData->socket] = -1;
     std::cout << clientID << std::endl;
     int buf_len;
     std::string u = uData->user;
@@ -628,9 +634,9 @@ void* serverCommands(void* user) {
 
         //nRet = select(nMaxFd, &fr, NULL, NULL, &tv);
 
-        char sBuff[255] = { 0, };
-        int nRet = recv(clientID, sBuff, 255, 0);
-        std::cout << sBuff << " In the while loop" << std::endl;
+        char Buff[255] = { 0, };
+        int nRet = recv(clientID, Buff, 255, 0);
+        std::cout << Buff << " In the while loop" << std::endl;
         if (nRet < 0)
         {
             //This happens when client closes connection abruptly
@@ -640,11 +646,11 @@ void* serverCommands(void* user) {
         }
         else
         {
-            while ((buf_len = (recv(clientID, sBuff, sizeof(sBuff), 0)))) {
+            while ((buf_len = (recv(clientID, Buff, sizeof(Buff), 0)))) {
                 //Print out recieved message
-                std::cout << "SERVER> Recieved message: " << sBuff;
+                std::cout << "SERVER> Recieved message: " << Buff << std::endl;
                 //Parse message for initial command
-                command = buildCommand(sBuff);
+                command = buildCommand(Buff);
                 std::cout << command << std::endl;
                 /*if (command == "LOGIN") {
                     u = extractInfo(sBuff, command, &user);
@@ -675,6 +681,7 @@ void* serverCommands(void* user) {
                 else if (command == "QUIT" && login) {
                     std::cout << "Quit command!" << std::endl;
                     send(clientID, "You sent the QUIT command!", 27, 0);
+                    nClient[uData->socket] = 0;
                     close(clientID);
 
                     login = false;
