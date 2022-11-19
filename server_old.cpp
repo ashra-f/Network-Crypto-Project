@@ -134,7 +134,7 @@ void HandleDataFromClient()
                     command = buildCommand(sBuff);
                     std::cout << command << std::endl;
 
-                    std::cout << std::endl << "Received data from:" << nClient[nIndex] << "[Message:" << sBuff << "]";
+                    //std::cout << std::endl << "Received data from:" << nClient[nIndex] << "[Message:" << sBuff << "]";
                     send(nClient[nIndex], "Recieved Message", 17, 0);
 
                     if (command == "LOGIN") {
@@ -143,18 +143,13 @@ void HandleDataFromClient()
                         u.user = info;
                         u.socket = nIndex;
                         pthread_create(&thread_handles, NULL, serverCommands, temp);
-                        //int x = nClient[nIndex];
-                        //nClient[nIndex] = -1;
-                        //break;
-                        //close(x);
 
                     }
                     else if (command == "QUIT") {
-                        std::cout << "Quit command! in handle data" << std::endl;
+                        std::cout << "Quit command!" << std::endl;
                         send(nClient[nIndex], "You sent the QUIT command!", 27, 0);
-                        int x = nClient[nIndex];
+                        close(nClient[nIndex]);
                         nClient[nIndex] = 0;
-                        close(x);
                     }
                     else {
                         std::cout << std::endl << "Received data from:" << nClient[nIndex] << "[Message:" << sBuff << "] Error 400" << std::endl;
@@ -521,6 +516,7 @@ int main(int argc, char* argv[]) {
             else
             {
                 //Check what existing client got the new data
+                std::cout << "in else for handle data" << std::endl;
                 HandleDataFromClient();
             }
         }
