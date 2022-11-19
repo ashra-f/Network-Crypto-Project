@@ -31,6 +31,7 @@ int nRet;
 int nClient[10] = { 0, };
 int nSocket;
 std::string infoArr[4];
+struct userInfo { int socket; std::string user; };
 
 fd_set fr;
 fd_set fw;
@@ -47,7 +48,7 @@ long thread;
 
 // Functions
 std::string buildCommand(char*);
-std::string extractInfo(char*, std::string, void*);
+std::string extractInfo(char*, std::string);
 void* serverCommands(void*);
 static int callback(void*, int, char**, char**);
 
@@ -77,7 +78,7 @@ void HandleNewConnection()
 
         std::cout << nNewClient << std::endl;
 
-        pthread_create(&thread_handles, NULL, serverCommands, temp);
+        
 
         int nIndex;
         for (nIndex = 0; nIndex < 5; nIndex++)
@@ -106,6 +107,11 @@ void HandleNewConnection()
 
 void HandleDataFromClient()
 {
+
+    std::string command;
+    struct userInfo *u;
+    void* temp = &u;
+
     for (int nIndex = 0; nIndex < 5; nIndex++)
     {
         if (nClient[nIndex] > 0)
@@ -124,8 +130,27 @@ void HandleDataFromClient()
                 }
                 else
                 {
+
+                    command = buildCommand(sBuff);
+
                     std::cout << std::endl << "Received data from:" << nClient[nIndex] << "[Message:" << sBuff << "]";
                     send(nClient[nIndex], "Recieved Message", 17, 0);
+
+                    if (command == "LOGIN") {
+
+                        u->user = extractInfo(sBuff, command);
+                        u->socket = nClient[nIndex];
+
+                        pthread_create(&thread_handles, NULL, serverCommands, temp);
+                    }
+                    else if (command == "QUIT") {
+                        std::cout << "Quit command!" << std::endl;
+                        send(nClient[nIndex], "You sent the QUIT command!", 27, 0);
+                        close(nClient[nIndex]);
+                    }
+                    else {
+                        std::cout << std::endl << "Received data from:" << nClient[nIndex] << "[Message:" << sBuff << "] Error 400" << std::endl;
+                    }
                     break;
                 }
             }
@@ -484,11 +509,11 @@ int main(int argc, char* argv[]) {
                 //Handle New connection
                 HandleNewConnection();
             }
-            /*else
+            else
             {
                 //Check what existing client got the new data
                 HandleDataFromClient();
-            }*/
+            }
         }
     }
 
@@ -563,13 +588,13 @@ std::string buildCommand(char line[]) {
 
 // Enters the command info into an array. This array contains the type of coin, amount of coin, price per unit of coin, and the user ID.
 // Returns true if successful, otherwise returns false 
-std::string extractInfo(char line[], std::string command, void* user) {
+std::string extractInfo(char line[], std::string command) {
     int l = command.length();
     int spaceLocation = l + 1;
     int i = spaceLocation;
     std::string info = "";
 
-    while (line[i] != '\n') {
+    while (line[i] != '\n' && line[i] != ' ' && line[i] != NULL) {
         info += line[i];
         //(std::string*)user += line[i];
         i++;
@@ -581,10 +606,11 @@ std::string extractInfo(char line[], std::string command, void* user) {
 
 void* serverCommands(void* user) {
     std::cout << "pthread created" /* << static_cast<std::string*>(user)*/ << std::endl;
-    int clientID = reinterpret_cast<int>(*(int*)user);
+    userInfo* uData = (struct userInfo*)user;
+    int clientID = uData->socket;
     std::cout << clientID << std::endl;
     int buf_len;
-    std::string u;
+    std::string u = uData->user;
     std::string command;
     bool login = false;
 
@@ -612,7 +638,7 @@ void* serverCommands(void* user) {
                 //Parse message for initial command
                 command = buildCommand(sBuff);
                 std::cout << command << std::endl;
-                if (command == "LOGIN") {
+                /*if (command == "LOGIN") {
                     u = extractInfo(sBuff, command, &user);
                     std::cout << u << " logged in!" << std::endl;
                     send(clientID, "You have logged in!", 20, 0);
@@ -620,9 +646,9 @@ void* serverCommands(void* user) {
                     // this will need to be set to true if the usernmae and password match
                     login = true;
 
-                }
+                }*/
 
-                else if (command == "BUY" && login) {
+                if (command == "BUY" && login) {
                     std::cout << "Buy command!" << std::endl;
                     send(clientID, "You sent the BUY command!", 26, 0);
                 }
