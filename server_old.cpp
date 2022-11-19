@@ -236,21 +236,20 @@ int main(int argc, char* argv[]) {
     rc = sqlite3_exec(db, sql, callback, 0, &zErrMsg);
 
 
-    //Check if user 1 exists in the database. If no user found, create new user
-    sql = "SELECT IIF(EXISTS(SELECT 1 FROM users WHERE  users.ID=1), 'USER_PRESENT', 'USER_NOT_PRESENT') result;";
-
+    // Checks if the root exists in the database. If no user is found, create it
+    sql = "SELECT IIF(EXISTS(SELECT 1 FROM users WHERE  users.user_name='root'), 'USER_PRESENT', 'USER_NOT_PRESENT') result;";
     rc = sqlite3_exec(db, sql, callback, ptr, &zErrMsg);
-
 
     if (rc != SQLITE_OK) {
         fprintf(stderr, "SQL error: %s\n", zErrMsg);
         sqlite3_free(zErrMsg);
     }
     else if (resultant == "USER_NOT_PRESENT") {
-        // Create a user if one doesn't already exist
-        fprintf(stdout, "No user is present in the users table. Attempting to add a new user.\n");
+        // Create the root user:
+        fprintf(stdout, "Root user is not present. Attempting to add the user.\n");
 
-        sql = "INSERT INTO users VALUES (1, 'cis427@gmail.com', 'John', 'Smith', 'J_Smith', 'password', 100);";
+        // Adds the root user
+        sql = "INSERT INTO users VALUES (1, 'root23@gmail.com', 'Root', 'User', 'root', 'root01', 100);";
         rc = sqlite3_exec(db, sql, callback, 0, &zErrMsg);
 
         if (rc != SQLITE_OK) {
@@ -262,7 +261,7 @@ int main(int argc, char* argv[]) {
         }
     }
     else if (resultant == "USER_PRESENT") {
-        std::cout << "A user is already present in the users table.\n";
+        std::cout << "The user already exists already present in the users table.\n";
     }
     else {
         fprintf(stderr, "SQL error: %s\n", zErrMsg);
@@ -270,6 +269,101 @@ int main(int argc, char* argv[]) {
         std::cout << "Error returned Resultant = " << resultant << std::endl;
     }
 
+    // Checks if Mary exists in the database. If no user is found, create it
+    sql = "SELECT IIF(EXISTS(SELECT 1 FROM users WHERE  users.user_name='mary'), 'USER_PRESENT', 'USER_NOT_PRESENT') result;";
+    rc = sqlite3_exec(db, sql, callback, ptr, &zErrMsg);
+
+    if (rc != SQLITE_OK) {
+        fprintf(stderr, "SQL error: %s\n", zErrMsg);
+        sqlite3_free(zErrMsg);
+    }
+    else if (resultant == "USER_NOT_PRESENT") {
+        fprintf(stdout, "Mary is not present. Attempting to add the user.\n");
+
+        // Adds mary
+        sql = "INSERT INTO users VALUES (2, 'mary231@gmail.com', 'Mary', 'Poppins', 'mary', 'mary01', 100);";
+        rc = sqlite3_exec(db, sql, callback, 0, &zErrMsg);
+
+        if (rc != SQLITE_OK) {
+            fprintf(stderr, "SQL error: %s\n", zErrMsg);
+            sqlite3_free(zErrMsg);
+        }
+        else {
+            fprintf(stdout, "\tA new user was added successfully.\n");
+        }
+    }
+    else if (resultant == "USER_PRESENT") {
+        std::cout << "The user already exists already present in the users table.\n";
+    }
+    else {
+        fprintf(stderr, "SQL error: %s\n", zErrMsg);
+        sqlite3_free(zErrMsg);
+        std::cout << "Error returned Resultant = " << resultant << std::endl;
+    }
+
+    // Check if John exists in the database. If no user is found, create it
+    sql = "SELECT IIF(EXISTS(SELECT 1 FROM users WHERE  users.user_name='john'), 'USER_PRESENT', 'USER_NOT_PRESENT') result;";
+    rc = sqlite3_exec(db, sql, callback, ptr, &zErrMsg);
+
+    if (rc != SQLITE_OK) {
+        fprintf(stderr, "SQL error: %s\n", zErrMsg);
+        sqlite3_free(zErrMsg);
+    }
+    else if (resultant == "USER_NOT_PRESENT") {
+        fprintf(stdout, "John is not present. Attempting to add the user.\n");
+
+        // Adds john
+        sql = "INSERT INTO users VALUES (3, 'john_ce23@gmail.com', 'John', 'Cena', 'john', 'john01', 100);";
+        rc = sqlite3_exec(db, sql, callback, 0, &zErrMsg);
+
+        if (rc != SQLITE_OK) {
+            fprintf(stderr, "SQL error: %s\n", zErrMsg);
+            sqlite3_free(zErrMsg);
+        }
+        else {
+            fprintf(stdout, "\tA new user was added successfully.\n");
+        }
+    }
+    else if (resultant == "USER_PRESENT") {
+        std::cout << "The user already exists already present in the users table.\n";
+    }
+    else {
+        fprintf(stderr, "SQL error: %s\n", zErrMsg);
+        sqlite3_free(zErrMsg);
+        std::cout << "Error returned Resultant = " << resultant << std::endl;
+    }
+
+    // Check if Moe exists in the database. If no user is found, create it
+    sql = "SELECT IIF(EXISTS(SELECT 1 FROM users WHERE  users.user_name='moe'), 'USER_PRESENT', 'USER_NOT_PRESENT') result;";
+    rc = sqlite3_exec(db, sql, callback, ptr, &zErrMsg);
+
+    if (rc != SQLITE_OK) {
+        fprintf(stderr, "SQL error: %s\n", zErrMsg);
+        sqlite3_free(zErrMsg);
+    }
+    else if (resultant == "USER_NOT_PRESENT") {
+        fprintf(stdout, "John is not present. Attempting to add the user.\n");
+
+        // Adds moe
+        sql = "INSERT INTO users VALUES (4, 'moe23@gmail.com', 'Moe', 'Szyslak', 'moe', 'moe01', 100);";
+        rc = sqlite3_exec(db, sql, callback, 0, &zErrMsg);
+
+        if (rc != SQLITE_OK) {
+            fprintf(stderr, "SQL error: %s\n", zErrMsg);
+            sqlite3_free(zErrMsg);
+        }
+        else {
+            fprintf(stdout, "\tA new user was added successfully.\n");
+        }
+    }
+    else if (resultant == "USER_PRESENT") {
+        std::cout << "The user already exists already present in the users table.\n";
+    }
+    else {
+        fprintf(stderr, "SQL error: %s\n", zErrMsg);
+        sqlite3_free(zErrMsg);
+        std::cout << "Error returned Resultant = " << resultant << std::endl;
+    }
 
 
 
