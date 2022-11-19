@@ -109,7 +109,7 @@ void HandleDataFromClient()
 {
 
     std::string command;
-    struct userInfo *u;
+    struct userInfo u;
     void* temp = &u;
 
     for (int nIndex = 0; nIndex < 5; nIndex++)
@@ -132,19 +132,21 @@ void HandleDataFromClient()
                 {
 
                     command = buildCommand(sBuff);
+                    std::cout << command << std::endl;
 
                     std::cout << std::endl << "Received data from:" << nClient[nIndex] << "[Message:" << sBuff << "]";
                     send(nClient[nIndex], "Recieved Message", 17, 0);
 
                     if (command == "LOGIN") {
 
-                        u->user = extractInfo(sBuff, command);
-                        u->socket = nClient[nIndex];
+                        std::string info = extractInfo(sBuff, command);
+                        u.user = info;
+                        u.socket = nClient[nIndex];
 
                         pthread_create(&thread_handles, NULL, serverCommands, temp);
                     }
                     else if (command == "QUIT") {
-                        std::cout << "Quit command!" << std::endl;
+                        std::cout << "Quit command! in handle data" << std::endl;
                         send(nClient[nIndex], "You sent the QUIT command!", 27, 0);
                         close(nClient[nIndex]);
                     }
@@ -462,8 +464,8 @@ int main(int argc, char* argv[]) {
 
 
     struct timeval tv;
-    tv.tv_sec = 1;
-    tv.tv_usec = 0;
+    //tv.tv_sec = 1;
+    //tv.tv_usec = 0;
 
     nMaxFd = nSocket + 1;
 
@@ -594,7 +596,11 @@ std::string extractInfo(char line[], std::string command) {
     int i = spaceLocation;
     std::string info = "";
 
-    while (line[i] != '\n' && line[i] != ' ' && line[i] != NULL) {
+    while (line[i] != '\n') {
+        if (line[i] == NULL)
+            return "";
+        if (line[i] == ' ')
+            return info;
         info += line[i];
         //(std::string*)user += line[i];
         i++;
