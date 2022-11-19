@@ -31,7 +31,17 @@ int nRet;
 int nClient[10] = { 0, };
 int nSocket;
 std::string infoArr[4];
-struct userInfo { int socket; std::string user; };
+
+
+
+typedef struct data 
+{ 
+    int socket; 
+    std::string user; 
+}userInfo;
+
+void* temp = malloc(sizeof(userInfo));
+userInfo u;
 
 fd_set fr;
 fd_set fw;
@@ -109,8 +119,9 @@ void HandleDataFromClient()
 {
 
     std::string command;
-    struct userInfo u;
-    void* temp = &u;
+    
+    
+    temp = &u;
 
     for (int nIndex = 0; nIndex < 5; nIndex++)
     {
@@ -142,7 +153,9 @@ void HandleDataFromClient()
                         std::string info = extractInfo(sBuff, command);
                         u.user = info;
                         u.socket = nIndex;
+                        std::cout << "Assigned user info. Username: " << ((userInfo*)temp)->user << " Socket Index: " << u.socket << std::endl;
                         pthread_create(&thread_handles, NULL, serverCommands, temp);
+                        std::cout << "after pthread creation" << std::endl;
 
                     }
                     else if (command == "QUIT") {
@@ -159,6 +172,7 @@ void HandleDataFromClient()
             }
         }
     }
+    std::cout << "out of data for loop" << std::endl;
 }
 
 
@@ -613,17 +627,22 @@ std::string extractInfo(char line[], std::string command) {
 
 }
 
-void* serverCommands(void* user) {
-    std::cout << "pthread created" /* << static_cast<std::string*>(user)*/ << std::endl;
-    userInfo* uData = (struct userInfo*)user;
-    int clientID = nClient[uData->socket];
-    nClient[uData->socket] = -1;
+void* serverCommands(void* userData) {
+    std::cout << "pthread created" << std::endl;
+    std::cout << "Username: " << ((userInfo*)userData)->user << std::endl;
+    std::cout << "no" << std::endl;
+    //userInfo* uData = malloc(sizeof(userInfo));
+    //uData = (userInfo*)user;
+    int clientIndex = ((userInfo*)userData)->socket;
+    int clientID = nClient[((userInfo*)userData)->socket];
+    std::cout << "assigned user" << std::endl;
+    nClient[clientIndex] = -1;
     std::cout << clientID << std::endl;
     int buf_len;
-    std::string u = uData->user;
+    std::string u = ((userInfo*)userData)->user;
     std::string command;
-    bool login = false;
-
+    bool login = true;
+    std::cout << "Client Socket: " << clientID << std::endl;
     //int k = &clientID;
 
     while (1) {
@@ -677,7 +696,7 @@ void* serverCommands(void* user) {
                 else if (command == "QUIT" && login) {
                     std::cout << "Quit command!" << std::endl;
                     send(clientID, "You sent the QUIT command!", 27, 0);
-                    nClient[uData->socket] = 0;
+                    nClient[clientIndex] = 0;
                     close(clientID);
 
                     login = false;
