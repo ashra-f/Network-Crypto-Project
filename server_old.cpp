@@ -1005,7 +1005,51 @@ void* serverCommands(void* userData) {
                 }
                 else if (command == "DEPOSIT") {
                     std::cout << "Deposit command!" << std::endl;
-                    send(clientID, "You sent the DEPOSIT command!", 30, 0);
+                    extractInfo(Buff, infoArr, command);
+                    std::string sql = "SELECT IIF(EXISTS(SELECT 1 FROM users WHERE users.ID=" + id + "), 'PRESENT', 'NOT_PRESENT') result;";
+
+                    /* Execute SQL statement */
+                    rc = sqlite3_exec(db, sql.c_str(), callback, ptr, &zErrMsg);
+
+                    if (rc != SQLITE_OK) {
+                        fprintf(stderr, "SQL error: %s\n", zErrMsg);
+                        sqlite3_free(zErrMsg);
+                        //send(nClient, "SQL error", 10, 0);
+                    }
+                    else if (resultant == "PRESENT") {
+                        // outputs balance for user 1
+                        std::string deposit = "";
+
+                        for (int i = (command.length() + 1); i < strlen(Buff); i++) {
+                            if (Buff[i] == '\n')
+                                break;
+                            deposit += Buff[i];
+                        }
+
+                        sql = "UPDATE users SET usd_balance= usd_balance +" + deposit + " WHERE users.ID='" + id + "';"; 
+                        rc = sqlite3_exec(db, sql.c_str(), callback, ptr, &zErrMsg);
+
+                        sql = "SELECT usd_balance FROM users WHERE users.ID=" + id;
+                        rc = sqlite3_exec(db, sql.c_str(), callback, ptr, &zErrMsg);
+                        std::string usd_balance = resultant;
+
+                        // get full user name
+                        sql = "SELECT first_name FROM users WHERE users.ID=" + id;
+                        rc = sqlite3_exec(db, sql.c_str(), callback, ptr, &zErrMsg);
+                        std::string user_name = resultant;
+
+                        sql = "SELECT last_name FROM users WHERE users.ID=" + id;
+                        rc = sqlite3_exec(db, sql.c_str(), callback, ptr, &zErrMsg);
+                        user_name += " " + resultant;
+
+                        std::string tempStr = "200 OK\n   New balance for user " + user_name + ": $" + usd_balance;
+                        send(clientID, tempStr.c_str(), sizeof(Buff), 0);
+                    }
+                    else {
+                        std::cout << "SERVER> User does not exist. Aborting Balance.\n";
+                        send(clientID, "User does not exist.", sizeof(Buff), 0);
+                    }
+                    //send(clientID, "You sent the DEPOSIT command!", 30, 0);
                 }
                 else if (command == "WHO" && rootUsr) {
                     std::cout << "Who command!" << std::endl;
