@@ -843,6 +843,7 @@ void* serverCommands(void* userData) {
                 else if (command == "LOGOUT" && login) {
                     std::cout << "Logout command!" << std::endl;
                     send(clientID, "You sent the LOGOUT command!", 29, 0);
+                    nClient[clientIndex] = clientID;
                     pthread_exit(userData);
                     return userData;
                 }
