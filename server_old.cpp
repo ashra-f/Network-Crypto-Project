@@ -138,8 +138,8 @@ void HandleDataFromClient()
             if (FD_ISSET(nClient[nIndex], &fr))
             {
                 //Read the data from client
-                char sBuff[255] = { 0, };
-                int nRet = recv(nClient[nIndex], sBuff, 255, 0);
+                char sBuff[256] = { 0, };
+                int nRet = recv(nClient[nIndex], sBuff, 256, 0);
                 if (nRet < 0)
                 {
                     //This happens when client closes connection abruptly
@@ -173,7 +173,7 @@ void HandleDataFromClient()
                         nClient[nIndex] = 0;
                     }
                     else {
-                        std::cout << std::endl << "Received data from:" << nClient[nIndex] << "[Message:" << sBuff << "] Error 400" << std::endl;
+                        std::cout << std::endl << "Received data from:" << nClient[nIndex] << "[Message: " << sBuff << " size of array: "<< strlen(sBuff) << "] Error 400" << std::endl;
                     }
                     break;
                 }
@@ -540,44 +540,6 @@ int main(int argc, char* argv[]) {
 
 
 
-
-
-
-    /*
-    // Wait for connection, then receive and print text
-    while (1) {
-        if ((nClient = accept(nSocket, (struct sockaddr*)&srv, &addr_len)) < 0) {
-            perror("Error during accepting connection");
-            sqlite3_close(db);
-            std::cout << "Closed DB" << std::endl;
-            close(nSocket);
-            std::cout << "Closed socket: " << nSocket << std::endl;
-            exit(EXIT_FAILURE);
-        }
-        else {
-            std::cout << "Client connected on socket: " << nClient << std::endl << std::endl;
-            send(nClient, "You have successfully connected to the server!", 47, 0);
-        }
-        while ((buf_len = (recv(nClient, buf, sizeof(buf), 0)))) {
-            //Print out recieved message
-            std::cout << "SERVER> Recieved message: " << buf;
-            //Parse message for initial command
-            command = buildCommand(buf);
-            if (command == "LOGIN") {
-                u = extractInfo(buf, command, &user);
-                std::cout << *(std::string*)user << std::endl;
-                pthread_create(&thread_handles, NULL, serverCommands, user);
-            }
-            // Default response to invalid command
-            else {
-                std::cout << "SERVER> Command not recognized" << std::endl;
-                send(nClient, "400 invalid command", 20, 0);
-            }
-        }
-    }
-    */
-
-
     for (int l = 0; l < 11; l++) {
         close(nClient[l]);
     }
@@ -649,10 +611,10 @@ void* serverCommands(void* userData) {
 
         //nRet = select(nMaxFd, &fr, NULL, NULL, &tv);
 
-        char Buff[255] = { 0, };
-        int nRet = recv(clientID, Buff, 255, 0);
+        char Buff[256] = { 0, };
+        //int nRet = recv(clientID, Buff, 255, 0);
         std::cout << Buff << " In the while loop" << std::endl;
-        if (nRet < 0)
+        /*if (nRet < 0)
         {
             //This happens when client closes connection abruptly
             std::cout << std::endl << "Error at client socket";
@@ -660,7 +622,7 @@ void* serverCommands(void* userData) {
             clientID = 0;
         }
         else
-        {
+        {*/
             while ((buf_len = (recv(clientID, Buff, sizeof(Buff), 0)))) {
                 //Print out recieved message
                 std::cout << "SERVER> Recieved message: " << Buff << std::endl;
@@ -679,7 +641,7 @@ void* serverCommands(void* userData) {
 
                 if (command == "BUY") {
                     std::cout << "Buy command!" << std::endl;
-                    send(clientID, "You sent the BUY command!", 26, 0);
+                    //send(clientID, "You sent the BUY command!", 26, 0);
 
 
                     // Checks if the client used the command properly
@@ -698,7 +660,7 @@ void* serverCommands(void* userData) {
                         if (rc != SQLITE_OK) {
                             fprintf(stderr, "SQL error: %s\n", zErrMsg);
                             sqlite3_free(zErrMsg);
-                            send(clientID, "SQL error", 10, 0);
+                            //send(clientID, "SQL error", 10, 0);
                         }
                         else if (resultant == "PRESENT") {
                             // USER EXISTS
@@ -718,7 +680,7 @@ void* serverCommands(void* userData) {
                             if (rc != SQLITE_OK) {
                                 fprintf(stderr, "SQL error: %s\n", zErrMsg);
                                 sqlite3_free(zErrMsg);
-                                send(clientID, "SQL error", 10, 0);
+                                //send(clientID, "SQL error", 10, 0);
                             }
                             else if (stod(usd_balance) >= cryptoPrice) {
                                 // User has enough in balance to make the purchase
@@ -732,7 +694,7 @@ void* serverCommands(void* userData) {
                                 if (rc != SQLITE_OK) {
                                     fprintf(stderr, "SQL error: %s\n", zErrMsg);
                                     sqlite3_free(zErrMsg);
-                                    send(clientID, "SQL error", 10, 0);
+                                    //send(clientID, "SQL error", 10, 0);
                                 }
 
                                 // Add new record or update record to crypto table
@@ -743,7 +705,7 @@ void* serverCommands(void* userData) {
                                 if (rc != SQLITE_OK) {
                                     fprintf(stderr, "SQL error: %s\n", zErrMsg);
                                     sqlite3_free(zErrMsg);
-                                    send(clientID, "SQL error", 10, 0);
+                                    //send(clientID, "SQL error", 10, 0);
                                 }
                                 else if (resultant == "RECORD_PRESENT") {
                                     // A record exists, so update the record
@@ -755,7 +717,7 @@ void* serverCommands(void* userData) {
                                     if (rc != SQLITE_OK) {
                                         fprintf(stderr, "SQL error: %s\n", zErrMsg);
                                         sqlite3_free(zErrMsg);
-                                        send(clientID, "SQL error", 10, 0);
+                                        //send(clientID, "SQL error", 10, 0);
                                     }
                                 }
                                 else {
@@ -768,7 +730,7 @@ void* serverCommands(void* userData) {
                                     if (rc != SQLITE_OK) {
                                         fprintf(stderr, "SQL error: %s\n", zErrMsg);
                                         sqlite3_free(zErrMsg);
-                                        send(clientID, "SQL error", 10, 0);
+                                        //send(clientID, "SQL error", 10, 0);
                                     }
                                 }
 
@@ -781,7 +743,7 @@ void* serverCommands(void* userData) {
                                 if (rc != SQLITE_OK) {
                                     fprintf(stderr, "SQL error: %s\n", zErrMsg);
                                     sqlite3_free(zErrMsg);
-                                    send(clientID, "SQL error", 10, 0);
+                                    //send(clientID, "SQL error", 10, 0);
                                 }
 
                                 // Get the new crypto_balance
@@ -792,7 +754,7 @@ void* serverCommands(void* userData) {
                                 if (rc != SQLITE_OK) {
                                     fprintf(stderr, "SQL error: %s\n", zErrMsg);
                                     sqlite3_free(zErrMsg);
-                                    send(clientID, "SQL error", 10, 0);
+                                    //send(clientID, "SQL error", 10, 0);
                                 }
                                 std::string crypto_balance = resultant;
 
@@ -833,8 +795,8 @@ void* serverCommands(void* userData) {
                     close(clientID);
                     pthread_exit(userData);
                     return userData;
-                    std::cout << "The pthread has be slain" << std::endl;
-                    break;
+                    //std::cout << "The pthread has be slain" << std::endl;
+                    //break;
                 }
                 else if (command == "SHUTDOWN" && login) {
                     std::cout << "Shutdown command!" << std::endl;
@@ -868,8 +830,13 @@ void* serverCommands(void* userData) {
             }
             //std::cout << std::endl << "Received data from:" << clientID << "[Message:" << sBuff << "]";
             //send(clientID, "Recieved Message", 17, 0);
-            break;
-        }
+            std::cout << std::endl << "Error at client socket";
+            nClient[clientIndex] = 0;
+            close(clientID);
+            pthread_exit(userData);
+            return userData;
+            //break;
+        //}
 
         
 
