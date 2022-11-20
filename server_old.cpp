@@ -34,18 +34,17 @@ std::string infoArr[3];
 
 sqlite3* db;
 char* zErrMsg = 0;
-const char* sql;
 int rc;
+const char* sql;
 std::string resultant;
 std::string* ptr = &resultant;
 
 
-typedef struct 
+typedef struct data 
 { 
     int socket;
     int id;
-    std::string user;
-    std::string password; 
+    std::string user; 
 }userInfo;
 
 void* temp = malloc(sizeof(userInfo));
@@ -70,25 +69,6 @@ std::string extractInfo(char*, std::string);
 bool extractInfo(char*, std::string*, std::string);
 void* serverCommands(void*);
 static int callback(void*, int, char**, char**);
-
-std::string getPassword(char line[], int n) {
-    
-    int spaceLocation = n + 2;
-    int i = spaceLocation;
-    std::string info = "";
-
-    while (line[i] != '\n') {
-        if (line[i] == NULL)
-            return "";
-        if (line[i] == ' ')
-            return info;
-        info += line[i];
-        //(std::string*)user += line[i];
-        i++;
-    }
-    //user = info;
-    return info;
-}
 
 void HandleNewConnection()
 {
@@ -177,32 +157,14 @@ void HandleDataFromClient()
                     send(nClient[nIndex], "Recieved Message", 17, 0);
 
                     if (command == "LOGIN") {
+
                         std::string info = extractInfo(sBuff, command);
                         u.user = info;
-                        int passLength = command.length() + info.length();
-                        std::string passInfo = getPassword(sBuff, passLength);
-                        std::cout << passInfo << std::endl;
-                        u.password = passInfo;
                         u.socket = nIndex;
-                        std::cout << "Assigned user info. Username: " << info << " Socket Index: " << u.socket << "Password: " << passInfo << std::endl;
-                        
-                        std::string commandSql = "SELECT IIF(EXISTS(SELECT * FROM users WHERE user_name = '" + info + "' AND password = '" + passInfo + "') , 'USER_PRESENT', 'USER_NOT_PRESENT') result;";
-                        std::cout << "Built Command" << std::endl;
-                        sql = commandSql.c_str();
-                        std::cout << "Built c_str" << std::endl;
-                        
-                        sqlite3_exec(db, sql, callback, 0, &zErrMsg);
-                        std::cout << "Executed Command: " + command;
-                        std::cout << "Resultant = " + resultant;
+                        std::cout << "Assigned user info. Username: " << ((userInfo*)temp)->user << " Socket Index: " << u.socket << std::endl;
+                        pthread_create(&thread_handles, NULL, serverCommands, temp);
+                        std::cout << "after pthread creation" << std::endl;
 
-                        if (resultant == "USER_PRESENT"){
-                            std::cout << "Logging in... " << std::endl;
-                            pthread_create(&thread_handles, NULL, serverCommands, temp);
-                            std::cout << "after pthread creation" << std::endl;
-                        }
-                        else{
-                            std::cout << "Username or Password Invalid!" << std::endl;
-                        }
                     }
                     else if (command == "QUIT") {
                         std::cout << "Quit command!" << std::endl;
@@ -221,52 +183,6 @@ void HandleDataFromClient()
     std::cout << "out of data for loop" << std::endl;
 }
 
-
-
-
-
-/*int
-main()
-{
-    struct sockaddr_in sin;
-    char buf[MAX_LINE];
-    int buf_len, addr_len;
-    int s, new_s;
-    std::string command = "";
-    std::string user = "";
-    pthread_t* thread_handles;
-    long thread;
-    /* build address data structure
-    bzero((char*)&sin, sizeof(sin));
-    sin.sin_family = AF_INET;
-    sin.sin_addr.s_addr = INADDR_ANY;
-    sin.sin_port = htons(SERVER_PORT);
-    /* setup passive open
-    if ((s = socket(PF_INET, SOCK_STREAM, 0)) < 0) {
-        perror("simplex-talk: socket");
-        exit(1);
-    }
-    if ((bind(s, (struct sockaddr*)&sin, sizeof(sin))) < 0) {
-        perror("simplex-talk: bind");
-        exit(1);
-    }
-    listen(s, MAX_PENDING);
-    /* wait for connection, then receive and print text *
-    while (1) {
-        if ((new_s = accept(s, (struct sockaddr*)&sin, &addr_len)) < 0) {
-            perror("simplex-talk: accept");
-            exit(1);
-        }
-        while (buf_len = recv(new_s, buf, sizeof(buf), 0))
-            fputs(buf, stdout);
-            command = buildCommand(buf);
-        if (command == "LOGIN") {
-            user = extractInfo(buf, command);
-            pthread_create(&thread_handles[thread], NULL, serverCommands, user);
-        }
-        close(new_s);
-    }
-}*/
 
 int main(int argc, char* argv[]) {
 
@@ -812,22 +728,21 @@ void* serverCommands(void* userData) {
                             send(clientID, tempStr.c_str(), sizeof(Buff), 0);
                         }
                     }
-                    */
                     std::cout << "SERVER> Successfully executed BUY command\n\n";
                 }
-                else if (command == "SELL" && login) {
+                else if (command == "SELL") {
                     std::cout << "Sell command!" << std::endl;
                     send(clientID, "You sent the SELL command!", 27, 0);
                 }
-                else if (command == "LIST" && login) {
+                else if (command == "LIST") {
                     std::cout << "List command!" << std::endl;
                     send(clientID, "You sent the LIST command!", 27, 0);
                 }
-                else if (command == "BALANCE" && login) {
+                else if (command == "BALANCE") {
                     std::cout << "Balance command!" << std::endl;
                     send(clientID, "You sent the BALANCE command!", 30, 0);
                 }
-                else if (command == "QUIT" && login) {
+                else if (command == "QUIT") {
                     std::cout << "Quit command!" << std::endl;
                     send(clientID, "You sent the QUIT command!", 27, 0);
                     nClient[clientIndex] = 0;
@@ -837,26 +752,26 @@ void* serverCommands(void* userData) {
                     //std::cout << "The pthread has be slain" << std::endl;
                     //break;
                 }
-                else if (command == "SHUTDOWN" && login) {
+                else if (command == "SHUTDOWN" && id) {
                     std::cout << "Shutdown command!" << std::endl;
                     send(clientID, "You sent the SHUTDOWN command!", 31, 0);
                 }
-                else if (command == "LOGOUT" && login) {
+                else if (command == "LOGOUT") {
                     std::cout << "Logout command!" << std::endl;
                     send(clientID, "You sent the LOGOUT command!", 29, 0);
                     nClient[clientIndex] = clientID;
                     pthread_exit(userData);
                     return userData;
                 }
-                else if (command == "DEPOSIT" && login) {
+                else if (command == "DEPOSIT") {
                     std::cout << "Deposit command!" << std::endl;
                     send(clientID, "You sent the DEPOSIT command!", 30, 0);
                 }
-                else if (command == "WHO" && login) {
+                else if (command == "WHO" && id) {
                     std::cout << "Who command!" << std::endl;
                     send(clientID, "You sent the WHO command!", 26, 0);
                 }
-                else if (command == "LOOKUP" && login) {
+                else if (command == "LOOKUP") {
                     std::cout << "Lookup command!" << std::endl;
                     send(clientID, "You sent the LOOKUP command!", 29, 0);
                 }
@@ -921,43 +836,28 @@ bool extractInfo(char line[], std::string info[], std::string command) {
 
 static int callback(void* ptr, int count, char** data, char** azColName) {
 
-
-    std::cout << "Enter Callback" << std::endl;
-    std::cout << data[0];
-    //std::string* resultant = (std::string*)ptr;
-
-    std::cout << "After assign resultant ptr" << std::endl;
-    std::cout << count << std::endl;
+    std::string* resultant = (std::string*)ptr;
 
     if (count == 1) {
-        std::cout << "Before assign resultant data[0]" << std::endl;
-    
-        resultant = data[0];
-        std::cout << "After assign resultant data[0]" << std::endl;
+        *resultant = data[0];
     }
     else if (count > 1) {
         for (int i = 0; i < count; i++) {
-            std::cout << "For loop iteration: "  << i << std::endl;
 
-            if (resultant == "") {
-                resultant = data[i];
+            if (*resultant == "") {
+                *resultant = data[i];
             }
             else {
-                resultant = resultant + " " + data[i];
+                *resultant = *resultant + " " + data[i];
             }
 
             // new line btwn every record
             if (i == 3)
             {
-                resultant += "\n  ";
+                *resultant += "\n  ";
             }
 
         }
     }
-    std::cout << "before result" << std::endl;
-
-    std::cout << resultant << std::endl;
-    std::cout << "Leave Callback" << std::endl;
-
     return 0;
 }
