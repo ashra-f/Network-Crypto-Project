@@ -181,22 +181,25 @@ void HandleDataFromClient()
                         u.user = info;
                         int passLength = command.length() + info.length();
                         std::string passInfo = getPassword(sBuff, passLength);
-                        std::cout << passInfo << std::endl;
+                        
                         u.password = passInfo;
                         u.socket = nIndex;
-                        std::cout << "Assigned user info. Username: " << info << " Socket Index: " << u.socket << "Password: " << passInfo << std::endl;
+
+                        std::cout << "Assigned user info. Username: " << info << " Socket Index: " << u.socket << std::endl;
                         
                         std::string commandSql = "SELECT IIF(EXISTS(SELECT * FROM users WHERE user_name = '" + info + "' AND password = '" + passInfo + "') , 'USER_PRESENT', 'USER_NOT_PRESENT') result;";
-                        std::cout << "Built Command" << std::endl;
                         sql = commandSql.c_str();
-                        std::cout << "Built c_str" << std::endl;
-                        
                         sqlite3_exec(db, sql, callback, 0, &zErrMsg);
-                        std::cout << "Executed Command: " + command;
-                        std::cout << "Resultant = " + resultant;
+                        
+                        
 
                         if (resultant == "USER_PRESENT"){
                             std::cout << "Logging in... " << std::endl;
+
+                            commandSql = "SELECT ID FROM users WHERE user_name = '" + info + "' AND password = '" + passInfo + "'";
+                            sql = commandSql.c_str();
+                            sqlite3_exec(db, sql, callback, 0, &zErrMsg);
+                            u.id = stoi(resultant);
                             pthread_create(&thread_handles, NULL, serverCommands, temp);
                             std::cout << "after pthread creation" << std::endl;
                         }
@@ -812,7 +815,7 @@ void* serverCommands(void* userData) {
                             send(clientID, tempStr.c_str(), sizeof(Buff), 0);
                         }
                     }
-                    */
+                    
                     std::cout << "SERVER> Successfully executed BUY command\n\n";
                 }
                 else if (command == "SELL" && login) {
