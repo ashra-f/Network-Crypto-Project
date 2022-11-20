@@ -884,8 +884,58 @@ void* serverCommands(void* userData) {
                     //send(clientID, "You sent the SELL command!", 27, 0);
                 }
                 else if (command == "LIST") {
-                    std::cout << "List command!" << std::endl;
-                    send(clientID, "You sent the LIST command!", 27, 0);
+                    //std::cout << "List command!" << std::endl;
+                    if (idINT == 1) {
+                        std::cout << "List command." << std::endl;
+                        resultant = "";
+                        // List all records in cryptos table for user_id = 1
+                        std::string sql = "SELECT * FROM cryptos";
+
+                        /* Execute SQL statement */
+                        rc = sqlite3_exec(db, sql.c_str(), callback, ptr, &zErrMsg);
+
+                        if (rc != SQLITE_OK) {
+                            fprintf(stderr, "SQL error: %s\n", zErrMsg);
+                            sqlite3_free(zErrMsg);
+                            //send(nClient, "SQL error", 10, 0);
+                        }
+
+                        std::string sendStr;
+
+                        if (resultant == "") {
+                            sendStr = "200 OK\n   No records in the Crypto Database.";
+                        }
+                        else {
+                            sendStr = "200 OK\n   The list of records in the Crypto database:\nCryptoID  Crypto_Name Crypto_Amount  UserID\n   " + resultant;
+                        }
+                        send(clientID, sendStr.c_str(), sizeof(Buff), 0);
+                    }
+                    else {
+                        std::cout << "List command." << std::endl;
+                        resultant = "";
+                        // List all records in cryptos table for user_id = 1
+                        std::string sql = "SELECT * FROM cryptos WHERE cryptos.user_id=" + id;
+
+                        /* Execute SQL statement */
+                        rc = sqlite3_exec(db, sql.c_str(), callback, ptr, &zErrMsg);
+
+                        if (rc != SQLITE_OK) {
+                            fprintf(stderr, "SQL error: %s\n", zErrMsg);
+                            sqlite3_free(zErrMsg);
+                            //send(nClient, "SQL error", 10, 0);
+                        }
+
+                        std::string sendStr;
+
+                        if (resultant == "") {
+                            sendStr = "200 OK\n   No records in the Crypto Database.";
+                        }
+                        else {
+                            sendStr = "200 OK\n   The list of records in the Crypto database:\nCryptoID  Crypto_Name Crypto_Amount  UserID\n   " + resultant;
+                        }
+                        send(clientID, sendStr.c_str(), sizeof(Buff), 0);
+                    }
+                    //send(clientID, "You sent the LIST command!", 27, 0);
                 }
                 else if (command == "BALANCE") {
                     std::cout << "Balance command!" << std::endl;
