@@ -34,17 +34,18 @@ std::string infoArr[3];
 
 sqlite3* db;
 char* zErrMsg = 0;
-int rc;
 const char* sql;
+int rc;
 std::string resultant;
 std::string* ptr = &resultant;
 
 
-typedef struct data 
+typedef struct 
 { 
     int socket;
     int id;
-    std::string user; 
+    std::string user;
+    std::string password; 
 }userInfo;
 
 void* temp = malloc(sizeof(userInfo));
@@ -69,6 +70,25 @@ std::string extractInfo(char*, std::string);
 bool extractInfo(char*, std::string*, std::string);
 void* serverCommands(void*);
 static int callback(void*, int, char**, char**);
+
+std::string getPassword(char line[], int n) {
+    
+    int spaceLocation = n + 2;
+    int i = spaceLocation;
+    std::string info = "";
+
+    while (line[i] != '\n') {
+        if (line[i] == NULL)
+            return "";
+        if (line[i] == ' ')
+            return info;
+        info += line[i];
+        //(std::string*)user += line[i];
+        i++;
+    }
+    //user = info;
+    return info;
+}
 
 void HandleNewConnection()
 {
@@ -157,14 +177,32 @@ void HandleDataFromClient()
                     send(nClient[nIndex], "Recieved Message", 17, 0);
 
                     if (command == "LOGIN") {
-
                         std::string info = extractInfo(sBuff, command);
                         u.user = info;
+                        int passLength = command.length() + info.length();
+                        std::string passInfo = getPassword(sBuff, passLength);
+                        std::cout << passInfo << std::endl;
+                        u.password = passInfo;
                         u.socket = nIndex;
-                        std::cout << "Assigned user info. Username: " << ((userInfo*)temp)->user << " Socket Index: " << u.socket << std::endl;
-                        pthread_create(&thread_handles, NULL, serverCommands, temp);
-                        std::cout << "after pthread creation" << std::endl;
+                        std::cout << "Assigned user info. Username: " << info << " Socket Index: " << u.socket << "Password: " << passInfo << std::endl;
+                        
+                        std::string commandSql = "SELECT IIF(EXISTS(SELECT * FROM users WHERE user_name = '" + info + "' AND password = '" + passInfo + "') , 'USER_PRESENT', 'USER_NOT_PRESENT') result;";
+                        std::cout << "Built Command" << std::endl;
+                        sql = commandSql.c_str();
+                        std::cout << "Built c_str" << std::endl;
+                        
+                        sqlite3_exec(db, sql, callback, 0, &zErrMsg);
+                        std::cout << "Executed Command: " + command;
+                        std::cout << "Resultant = " + resultant;
 
+                        if (resultant == "USER_PRESENT"){
+                            std::cout << "Logging in... " << std::endl;
+                            pthread_create(&thread_handles, NULL, serverCommands, temp);
+                            std::cout << "after pthread creation" << std::endl;
+                        }
+                        else{
+                            std::cout << "Username or Password Invalid!" << std::endl;
+                        }
                     }
                     else if (command == "QUIT") {
                         std::cout << "Quit command!" << std::endl;
@@ -683,7 +721,7 @@ void* serverCommands(void* userData) {
                 if (command == "BUY") {
                     std::cout << "Buy command!" << std::endl;
                     send(clientID, "You sent the BUY command!", 26, 0);
-
+                    /*
 
                     // Checks if the client used the command properly
                     if (!extractInfo(Buff, infoArr, command)) {
@@ -815,6 +853,7 @@ void* serverCommands(void* userData) {
                             send(clientID, tempStr.c_str(), sizeof(Buff), 0);
                         }
                     }
+                    */
                     std::cout << "SERVER> Successfully executed BUY command\n\n";
                 }
                 else if (command == "SELL" && login) {
@@ -918,28 +957,43 @@ bool extractInfo(char line[], std::string info[], std::string command) {
 
 static int callback(void* ptr, int count, char** data, char** azColName) {
 
-    std::string* resultant = (std::string*)ptr;
+
+    std::cout << "Enter Callback" << std::endl;
+    std::cout << data[0];
+    //std::string* resultant = (std::string*)ptr;
+
+    std::cout << "After assign resultant ptr" << std::endl;
+    std::cout << count << std::endl;
 
     if (count == 1) {
-        *resultant = data[0];
+        std::cout << "Before assign resultant data[0]" << std::endl;
+    
+        resultant = data[0];
+        std::cout << "After assign resultant data[0]" << std::endl;
     }
     else if (count > 1) {
         for (int i = 0; i < count; i++) {
+            std::cout << "For loop iteration: "  << i << std::endl;
 
-            if (*resultant == "") {
-                *resultant = data[i];
+            if (resultant == "") {
+                resultant = data[i];
             }
             else {
-                *resultant = *resultant + " " + data[i];
+                resultant = resultant + " " + data[i];
             }
 
             // new line btwn every record
             if (i == 3)
             {
-                *resultant += "\n  ";
+                resultant += "\n  ";
             }
 
         }
     }
+    std::cout << "before result" << std::endl;
+
+    std::cout << resultant << std::endl;
+    std::cout << "Leave Callback" << std::endl;
+
     return 0;
 }
