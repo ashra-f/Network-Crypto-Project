@@ -3,6 +3,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <vector>
 
 
 // Server Port/Socket/Addr related headers
@@ -15,6 +16,8 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <pthread.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
 
 #include "sqlite3.h"
 
@@ -48,8 +51,16 @@ typedef struct
     std::string password; 
 }userInfo;
 
+typedef struct
+{
+    std::string ip;
+    std::string user;
+}loggedUser;
+
 void* temp = malloc(sizeof(userInfo));
 userInfo u;
+
+std::vector<loggedUser> list;
 
 fd_set fr;
 fd_set fw;
@@ -178,12 +189,24 @@ void HandleDataFromClient()
 
                     if (command == "LOGIN") {
                         std::string info = extractInfo(sBuff, command);
+                        loggedUser tempStruct;
                         u.user = info;
                         int passLength = command.length() + info.length();
                         std::string passInfo = getPassword(sBuff, passLength);
                         
                         u.password = passInfo;
                         u.socket = nIndex;
+                        struct sockaddr_in client_addr;
+                        socklen_t addrlen;
+                        getpeername(nClient[nIndex], (struct sockaddr*)&client_addr, &addrlen);
+                        tempStruct.ip = "";
+                        std::cout << "IP address: " << inet_ntoa(srv.sin_addr) << std::endl;
+                        for(int i = 0; i < sizeof(inet_ntoa(srv.sin_addr))+1; i++){
+                            tempStruct.ip += inet_ntoa(srv.sin_addr)[i];
+                        }
+                        tempStruct.user = u.user;
+
+                        list.push_back(tempStruct);
 
                         std::cout << "Assigned user info. Username: " << info << " Socket Index: " << u.socket << std::endl;
                         
@@ -200,6 +223,10 @@ void HandleDataFromClient()
                             sql = commandSql.c_str();
                             sqlite3_exec(db, sql, callback, 0, &zErrMsg);
                             u.id = stoi(resultant);
+
+                            //printf("IP address is: %s\n", inet_ntoa(srv.sin_addr));
+                            //std::cout << "IP: " << str << std::endl;
+
                             pthread_create(&thread_handles, NULL, serverCommands, temp);
                             std::cout << "after pthread creation" << std::endl;
                         }
@@ -976,6 +1003,10 @@ void* serverCommands(void* userData) {
                 else if (command == "QUIT") {
                     std::cout << "Quit command!" << std::endl;
                     send(clientID, "You sent the QUIT command!", 27, 0);
+                    for (int i = 0; i < list.size(); i++) {
+                        if (list.at(i).user == u)
+                            list.erase(list.begin() + i);
+                    }
                     nClient[clientIndex] = 0;
                     close(clientID);
                     pthread_exit(userData);
@@ -999,13 +1030,16 @@ void* serverCommands(void* userData) {
                 else if (command == "LOGOUT") {
                     std::cout << "Logout command!" << std::endl;
                     send(clientID, "You sent the LOGOUT command!", 29, 0);
+                    for (int i = 0; i < list.size(); i++) {
+                        if (list.at(i).user == u)
+                            list.erase(list.begin() + i);
+                    }
                     nClient[clientIndex] = clientID;
                     pthread_exit(userData);
                     return userData;
                 }
                 else if (command == "DEPOSIT") {
                     std::cout << "Deposit command!" << std::endl;
-                    extractInfo(Buff, infoArr, command);
                     std::string sql = "SELECT IIF(EXISTS(SELECT 1 FROM users WHERE users.ID=" + id + "), 'PRESENT', 'NOT_PRESENT') result;";
 
                     /* Execute SQL statement */
@@ -1053,11 +1087,41 @@ void* serverCommands(void* userData) {
                 }
                 else if (command == "WHO" && rootUsr) {
                     std::cout << "Who command!" << std::endl;
-                    send(clientID, "You sent the WHO command!", 26, 0);
+                    std::string result = "200 OK\nThe list of the active users:\n";
+                    for (int i = 0; i < list.size(); i++) {
+                        result += (list.at(i).user + " " + list.at(i).ip + "\n");
+                        std::cout << list.at(i).user << std::endl;
+                    }
+                    send(clientID, result.c_str(), sizeof(Buff), 0);
+
+                    //send(clientID, "You sent the WHO command!", 26, 0);
                 }
                 else if (command == "LOOKUP") {
                     std::cout << "Lookup command!" << std::endl;
-                    send(clientID, "You sent the LOOKUP command!", 29, 0);
+                    std::string searchTerm = "";
+                    std::string sendStr;
+                    resultant = "";
+                    for (int i = (command.length() + 1); i < strlen(Buff); i++) {
+                        if (Buff[i] == '\n')
+                            break;
+                        searchTerm += Buff[i];
+                    }
+                    std::string sql = "SELECT COUNT(crypto_name) FROM (SELECT * FROM cryptos WHERE user_id = " + id + ") WHERE crypto_name LIKE '%" + searchTerm + "%';";
+                    rc = sqlite3_exec(db, sql.c_str(), callback, ptr, &zErrMsg);
+                    std::string count = resultant;
+                    resultant = "";
+                    sql = "SELECT crypto_name, crypto_balance FROM (SELECT * FROM cryptos WHERE user_id = " + id + ") WHERE crypto_name LIKE '%" + searchTerm + "%'";
+                    rc = sqlite3_exec(db, sql.c_str(), callback, ptr, &zErrMsg);
+
+                    if (resultant == "") {
+                        sendStr = "404 Your search did not match any records";
+                    }
+                    else {
+                        sendStr = "200 OK\n   Found:" + count + "\nCrypto_Name Crypto_Amount\n   " + resultant;
+                    }
+                    send(clientID, sendStr.c_str(), sizeof(Buff), 0);
+
+                    //send(clientID, "You sent the LOOKUP command!", 29, 0);
                 }
 
                 // Default response to invalid command
