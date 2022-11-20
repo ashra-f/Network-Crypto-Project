@@ -55,6 +55,8 @@ typedef struct
 {
     std::string ip;
     std::string user;
+    int socket;
+    pthread_t threadAwesome;
 }loggedUser;
 
 void* temp = malloc(sizeof(userInfo));
@@ -184,7 +186,6 @@ void HandleDataFromClient()
                     command = buildCommand(sBuff);
                     std::cout << command << std::endl;
 
-                    //std::cout << std::endl << "Received data from:" << nClient[nIndex] << "[Message:" << sBuff << "]";
                     send(nClient[nIndex], "Recieved Message", 17, 0);
 
                     if (command == "LOGIN") {
@@ -196,17 +197,10 @@ void HandleDataFromClient()
                         
                         u.password = passInfo;
                         u.socket = nIndex;
+                        tempStruct.socket = nIndex;
                         struct sockaddr_in client_addr;
                         socklen_t addrlen;
-                        getpeername(nClient[nIndex], (struct sockaddr*)&client_addr, &addrlen);
-                        tempStruct.ip = "";
-                        std::cout << "IP address: " << inet_ntoa(srv.sin_addr) << std::endl;
-                        for(int i = 0; i < sizeof(inet_ntoa(srv.sin_addr))+1; i++){
-                            tempStruct.ip += inet_ntoa(srv.sin_addr)[i];
-                        }
-                        tempStruct.user = u.user;
-
-                        list.push_back(tempStruct);
+                        
 
                         std::cout << "Assigned user info. Username: " << info << " Socket Index: " << u.socket << std::endl;
                         
@@ -219,15 +213,23 @@ void HandleDataFromClient()
                         if (resultant == "USER_PRESENT"){
                             std::cout << "Logging in... " << std::endl;
 
+                            getpeername(nClient[nIndex], (struct sockaddr*)&client_addr, &addrlen);
+                            tempStruct.ip = "";
+                            std::cout << "IP address: " << inet_ntoa(srv.sin_addr) << std::endl;
+                            for (int i = 0; i < sizeof(inet_ntoa(srv.sin_addr)) + 1; i++) {
+                                tempStruct.ip += inet_ntoa(srv.sin_addr)[i];
+                            }
+                            tempStruct.user = u.user;
+
+                            list.push_back(tempStruct);
+
                             commandSql = "SELECT ID FROM users WHERE user_name = '" + info + "' AND password = '" + passInfo + "'";
                             sql = commandSql.c_str();
                             sqlite3_exec(db, sql, callback, 0, &zErrMsg);
                             u.id = stoi(resultant);
 
-                            //printf("IP address is: %s\n", inet_ntoa(srv.sin_addr));
-                            //std::cout << "IP: " << str << std::endl;
-
-                            pthread_create(&thread_handles, NULL, serverCommands, temp);
+                            pthread_create(&(list.at(list.size()-1).threadAwesome), NULL, serverCommands, temp);
+                            
                             std::cout << "after pthread creation" << std::endl;
                         }
                         else{
@@ -255,10 +257,6 @@ void HandleDataFromClient()
 
 int main(int argc, char* argv[]) {
 
-
-
-    // Database Variables
-    
 
     // Open Database and Connect to Database
     rc = sqlite3_open("cis427_crypto.sqlite", &db);
@@ -505,14 +503,8 @@ int main(int argc, char* argv[]) {
 
 
     struct timeval tv;
-    //tv.tv_sec = 1;
-    //tv.tv_usec = 0;
 
     nMaxFd = nSocket + 1;
-
-
-
-
 
 
     while (1)
@@ -555,7 +547,6 @@ int main(int argc, char* argv[]) {
             else
             {
                 //Check what existing client got the new data
-                std::cout << "in else for handle data" << std::endl;
                 HandleDataFromClient();
             }
         }
@@ -566,9 +557,6 @@ int main(int argc, char* argv[]) {
     for (int l = 0; l < 11; l++) {
         close(nClient[l]);
     }
-
-    //close(nClient);
-
 
 
     sqlite3_close(db);
@@ -1022,8 +1010,20 @@ void* serverCommands(void* userData) {
                     std::cout << "Closed DB" << std::endl;
                     close(clientID);
                     std::cout << "Closed Client Connection: " << clientID << std::endl;
+                    for (int i = 0; i < list.size(); i++) {
+                        if (list.at(i).user == u)
+                            list.erase(list.begin() + i);
+                    }
+                    for (int i = 0; i < list.size(); i++) {
+                        //nClient[list.at(i).socket] = 0;
+                        close(nClient[list.at(i).socket]);
+                        pthread_cancel((list.at(i)).threadAwesome);
+                        std::cout << "in for loop for shutdown" << std::endl;
+                    }
                     close(nSocket);
                     std::cout << "Closed Server socket: " << nSocket << std::endl;
+                    pthread_exit(userData);
+                    //return userData;
                     exit(EXIT_SUCCESS);
                     //send(clientID, "You sent the SHUTDOWN command!", 31, 0);
                 }
