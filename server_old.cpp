@@ -985,7 +985,16 @@ void* serverCommands(void* userData) {
                 }
                 else if (command == "SHUTDOWN" && rootUsr) {
                     std::cout << "Shutdown command!" << std::endl;
-                    send(clientID, "You sent the SHUTDOWN command!", 31, 0);
+                    send(clientID, "200 OK", 7, 0);
+                    std::cout << "Shutdown command." << std::endl;
+                    sqlite3_close(db);
+                    std::cout << "Closed DB" << std::endl;
+                    close(clientID);
+                    std::cout << "Closed Client Connection: " << clientID << std::endl;
+                    close(nSocket);
+                    std::cout << "Closed Server socket: " << nSocket << std::endl;
+                    exit(EXIT_SUCCESS);
+                    //send(clientID, "You sent the SHUTDOWN command!", 31, 0);
                 }
                 else if (command == "LOGOUT") {
                     std::cout << "Logout command!" << std::endl;
